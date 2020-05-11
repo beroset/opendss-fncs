@@ -5,12 +5,12 @@ LABEL maintainer="Ed Beroset <beroset@ieee.org>"
 WORKDIR /tmp/
 RUN apt-get -y update && \
     apt-get install -y git libtool make unzip pkg-config g++
-RUN git clone git://github.com/jedisct1/libsodium.git && \
+RUN git clone https://github.com/jedisct1/libsodium.git && \
     cd libsodium && \
     git checkout e2a30a
-RUN git clone --depth 1 git://github.com/zeromq/libzmq.git
-RUN git clone git://github.com/zeromq/czmq.git
-RUN git clone git://github.com/FNCS/fncs.git
+RUN git clone --depth 1 https://github.com/zeromq/libzmq.git
+RUN git clone https://github.com/zeromq/czmq.git
+RUN git clone https://github.com/FNCS/fncs.git
 
 # install files into /usr/local/lib
 COPY Makefile Makefile
