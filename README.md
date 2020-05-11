@@ -29,4 +29,6 @@ If you started with no Podman or Docker images and list the images (using `podma
     docker.io/library/debian         buster-slim   e5aad4204d00   2 weeks ago      72.5 MB
     docker.io/library/debian         buster        3de0e2c97e5c   2 weeks ago      119 MB
 
-If you want to conserve space on your hard drive, all of the images except for the most recent one (`localhost/beroset/opendss-fncs`) could be removed.  Alternatively, only the largest two, with tags of `<none>` could be deleted, returning about 1.5GB of disk space.  The only difference between the `/beroset/opendss` and `/beroset/opendss-fncs` images is that the latter also includes FNCS.  That is, everything that `/beroset/opendss` can do can also be done with `/beroset/opendss-fncs`, so for maximum flexibility, one could always use the fncs version.
+If you want to conserve space on your hard drive, all of the images except for the most recent one (`localhost/beroset/opendss-fncs`) could be removed.  Alternatively, only the largest two, with tags of `<none>` could be deleted, returning about 2.5GB of disk space.  The only difference between the `/beroset/opendss` and `/beroset/opendss-fncs` images is that the latter also includes FNCS.  That is, everything that `/beroset/opendss` can do can also be done with `/beroset/opendss-fncs`, so for maximum flexibility, one could always use the fncs version.  
+
+However, if you are planning to modify the containter files and rebuild the images, it may be helpful to leave the large intermediate images in place to speed the rebuild process.
