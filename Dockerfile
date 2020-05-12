@@ -18,6 +18,7 @@ RUN make
 
 FROM beroset/opendss
 WORKDIR /root/
-COPY --from=builder /usr/local/ /usr/local/
+COPY --from=builder /tmp/libs.tar.gz libs.tar.gz
+RUN cd / && tar -xvzf /root/libs.tar.gz && rm /root/libs.tar.gz
 RUN ldconfig
 ENTRYPOINT ["/root/opendsscmd"]
