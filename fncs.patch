@@ -1,22 +1,31 @@
 diff --git a/src/player.cpp b/src/player.cpp
-index 91f2a7a..a85fd12 100644
+index 91f2a7a..572580a 100644
 --- a/src/player.cpp
 +++ b/src/player.cpp
-@@ -94,10 +94,15 @@ int main(int argc, char **argv)
-         copy(istream_iterator<string>(iss),
-                 istream_iterator<string>(),
-                 back_inserter(tokens));
+@@ -5,6 +5,7 @@
+ #include <algorithm>
+ #include <cstdlib>
+ #include <fstream>
++#include <iomanip>
+ #include <iostream>
+ #include <iterator>
+ #include <sstream>
+@@ -89,15 +90,10 @@ int main(int argc, char **argv)
+         fncs::time event;
+ 
+         /* tokenize line */
+-        vector<string> tokens;
++        vector<string> tokens(3, " ");
+         istringstream iss(line);
+-        copy(istream_iterator<string>(iss),
+-                istream_iterator<string>(),
+-                back_inserter(tokens));
 -        if (tokens.size() != 3) {
-+	for (unsigned i=3; i < tokens.size(); ++i) {
-+	    tokens[2] += " " + tokens[i];
-+	}
-+        if (tokens.size() < 3) {
-             cerr << "Bad line: " << counter << ": '" << line << "'" << endl;
-             fncs::die();
+-            cerr << "Bad line: " << counter << ": '" << line << "'" << endl;
+-            fncs::die();
 -        }
-+        } else {
-+	    tokens.resize(3);
-+	}
++	iss >> tokens[0] >> tokens[1] >> ws;
++	getline(iss, tokens[2]);
  
          /* convert first token into fncs::time */
          {
