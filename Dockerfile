@@ -12,8 +12,10 @@ RUN git clone --depth 1 https://github.com/zeromq/libzmq.git
 RUN git clone https://github.com/zeromq/czmq.git
 RUN git clone https://github.com/FNCS/fncs.git
 
-# install files into /usr/local/lib
 COPY Makefile Makefile
+COPY fncs.patch fncs.patch
+RUN cd fncs && \
+    git apply /tmp/fncs.patch
 RUN make
 
 FROM beroset/opendss
