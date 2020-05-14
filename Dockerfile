@@ -15,7 +15,7 @@ RUN git clone https://github.com/FNCS/fncs.git
 COPY Makefile Makefile
 COPY fncs.patch fncs.patch
 RUN cd fncs && \
-    git apply /tmp/fncs.patch
+    git apply --ignore-whitespace /tmp/fncs.patch
 RUN make
 
 FROM beroset/opendss
