@@ -23,4 +23,4 @@ WORKDIR /root/
 COPY --from=builder /tmp/libs.tar.gz libs.tar.gz
 RUN cd / && tar -xvzf /root/libs.tar.gz && rm /root/libs.tar.gz
 RUN ldconfig
-ENTRYPOINT ["/root/opendsscmd"]
+ENTRYPOINT ["/bin/opendsscmd"]
