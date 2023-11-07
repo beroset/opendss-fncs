@@ -1,3 +1,329 @@
+From 9bda97a7315bdf52b4873839ccc95da6059e58b7 Mon Sep 17 00:00:00 2001
+From: Ed Beroset <beroset@ieee.org>
+Date: Tue, 7 Nov 2023 16:58:10 +0000
+Subject: [PATCH] Minimal update to remove deprecated C++ features
+
+This replaces all auto_ptr with unique_ptr and streamlines argument
+processing.
+
+Signed-off-by: Ed Beroset <beroset@ieee.org>
+---
+ contrib/yaml-cpp/include/yaml-cpp/emitter.h  |  2 +-
+ contrib/yaml-cpp/include/yaml-cpp/iterator.h |  4 ++--
+ contrib/yaml-cpp/include/yaml-cpp/node.h     |  4 ++--
+ contrib/yaml-cpp/include/yaml-cpp/parser.h   |  4 ++--
+ contrib/yaml-cpp/src/emitterstate.cpp        |  6 +++---
+ contrib/yaml-cpp/src/iterator.cpp            |  2 +-
+ contrib/yaml-cpp/src/node.cpp                | 12 ++++++------
+ contrib/yaml-cpp/src/nodeownership.cpp       |  2 +-
+ contrib/yaml-cpp/src/ptr_stack.h             |  6 +++---
+ contrib/yaml-cpp/src/ptr_vector.h            |  2 +-
+ contrib/yaml-cpp/src/scanner.cpp             |  8 ++++----
+ contrib/yaml-cpp/src/setting.h               | 10 +++++-----
+ contrib/yaml-cpp/src/singledocparser.h       |  2 +-
+ src/fncs.cpp                                 |  2 +-
+ src/player.cpp                               | 12 ++++--------
+ 15 files changed, 37 insertions(+), 41 deletions(-)
+
+diff --git a/contrib/yaml-cpp/include/yaml-cpp/emitter.h b/contrib/yaml-cpp/include/yaml-cpp/emitter.h
+index 1d7edf2..5478bb3 100644
+--- a/contrib/yaml-cpp/include/yaml-cpp/emitter.h
++++ b/contrib/yaml-cpp/include/yaml-cpp/emitter.h
+@@ -102,7 +102,7 @@ namespace YAML
+ 		
+ 	private:
+ 		ostream m_stream;
+-		std::auto_ptr <EmitterState> m_pState;
++		std::unique_ptr <EmitterState> m_pState;
+ 	};
+ 	
+ 	template <typename T>
+diff --git a/contrib/yaml-cpp/include/yaml-cpp/iterator.h b/contrib/yaml-cpp/include/yaml-cpp/iterator.h
+index 400ee34..f3d3878 100644
+--- a/contrib/yaml-cpp/include/yaml-cpp/iterator.h
++++ b/contrib/yaml-cpp/include/yaml-cpp/iterator.h
+@@ -17,7 +17,7 @@ namespace YAML
+ 	{
+ 	public:
+ 		Iterator();
+-		Iterator(std::auto_ptr<IterPriv> pData);
++		Iterator(std::unique_ptr<IterPriv> pData);
+ 		Iterator(const Iterator& rhs);
+ 		~Iterator();
+ 
+@@ -33,7 +33,7 @@ namespace YAML
+ 		friend YAML_CPP_API bool operator != (const Iterator& it, const Iterator& jt);
+ 
+ 	private:
+-		std::auto_ptr<IterPriv> m_pData;
++		std::unique_ptr<IterPriv> m_pData;
+ 	};
+ }
+ 
+diff --git a/contrib/yaml-cpp/include/yaml-cpp/node.h b/contrib/yaml-cpp/include/yaml-cpp/node.h
+index e78190e..251e4f6 100644
+--- a/contrib/yaml-cpp/include/yaml-cpp/node.h
++++ b/contrib/yaml-cpp/include/yaml-cpp/node.h
+@@ -40,7 +40,7 @@ namespace YAML
+ 		~Node();
+ 
+ 		void Clear();
+-		std::auto_ptr<Node> Clone() const;
++		std::unique_ptr<Node> Clone() const;
+ 		void EmitEvents(EventHandler& eventHandler) const;
+ 		void EmitEvents(AliasManager& am, EventHandler& eventHandler) const;
+ 		
+@@ -114,7 +114,7 @@ namespace YAML
+ 		const Node *FindValueForKey(const T& key) const;
+ 
+ 	private:
+-		std::auto_ptr<NodeOwnership> m_pOwnership;
++		std::unique_ptr<NodeOwnership> m_pOwnership;
+ 
+ 		Mark m_mark;
+ 		std::string m_tag;
+diff --git a/contrib/yaml-cpp/include/yaml-cpp/parser.h b/contrib/yaml-cpp/include/yaml-cpp/parser.h
+index f71cdff..e451e9a 100644
+--- a/contrib/yaml-cpp/include/yaml-cpp/parser.h
++++ b/contrib/yaml-cpp/include/yaml-cpp/parser.h
+@@ -43,8 +43,8 @@ namespace YAML
+ 		void HandleTagDirective(const Token& token);
+ 		
+ 	private:
+-		std::auto_ptr<Scanner> m_pScanner;
+-		std::auto_ptr<Directives> m_pDirectives;
++		std::unique_ptr<Scanner> m_pScanner;
++		std::unique_ptr<Directives> m_pDirectives;
+ 	};
+ }
+ 
+diff --git a/contrib/yaml-cpp/src/emitterstate.cpp b/contrib/yaml-cpp/src/emitterstate.cpp
+index 562e82c..8880e4e 100644
+--- a/contrib/yaml-cpp/src/emitterstate.cpp
++++ b/contrib/yaml-cpp/src/emitterstate.cpp
+@@ -51,7 +51,7 @@ namespace YAML
+ 		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
+ 		m_curIndent += lastIndent;
+ 		
+-		std::auto_ptr<Group> pGroup(new Group(type));
++		std::unique_ptr<Group> pGroup = std::make_unique<Group>(type);
+ 		
+ 		// transfer settings (which last until this group is done)
+ 		pGroup->modifiedSettings = m_modifiedSettings;
+@@ -61,7 +61,7 @@ namespace YAML
+ 		pGroup->indent = GetIndent();
+ 		pGroup->usingLongKey = (GetMapKeyFormat() == LongKey ? true : false);
+ 
+-		m_groups.push(pGroup);
++		m_groups.push(std::move(pGroup));
+ 	}
+ 	
+ 	void EmitterState::EndGroup(GROUP_TYPE type)
+@@ -71,7 +71,7 @@ namespace YAML
+ 		
+ 		// get rid of the current group
+ 		{
+-			std::auto_ptr<Group> pFinishedGroup = m_groups.pop();
++			std::unique_ptr<Group> pFinishedGroup = m_groups.pop();
+ 			if(pFinishedGroup->type != type)
+ 				return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
+ 		}
+diff --git a/contrib/yaml-cpp/src/iterator.cpp b/contrib/yaml-cpp/src/iterator.cpp
+index f4159e3..c057a7a 100644
+--- a/contrib/yaml-cpp/src/iterator.cpp
++++ b/contrib/yaml-cpp/src/iterator.cpp
+@@ -8,7 +8,7 @@ namespace YAML
+ 	{
+ 	}
+ 
+-	Iterator::Iterator(std::auto_ptr<IterPriv> pData): m_pData(pData)
++	Iterator::Iterator(std::unique_ptr<IterPriv> pData): m_pData(std::move(pData))
+ 	{
+ 	}
+ 
+diff --git a/contrib/yaml-cpp/src/node.cpp b/contrib/yaml-cpp/src/node.cpp
+index 360b4ad..b04bd9f 100644
+--- a/contrib/yaml-cpp/src/node.cpp
++++ b/contrib/yaml-cpp/src/node.cpp
+@@ -51,9 +51,9 @@ namespace YAML
+ 		return m_pOwnership->Create();
+ 	}
+ 
+-	std::auto_ptr<Node> Node::Clone() const
++	std::unique_ptr<Node> Node::Clone() const
+ 	{
+-		std::auto_ptr<Node> pNode(new Node);
++		std::unique_ptr<Node> pNode(new Node);
+ 		NodeBuilder nodeBuilder(*pNode);
+ 		EmitEvents(nodeBuilder);
+ 		return pNode;
+@@ -145,9 +145,9 @@ namespace YAML
+ 			case NodeType::Scalar:
+ 				return Iterator();
+ 			case NodeType::Sequence:
+-				return Iterator(std::auto_ptr<IterPriv>(new IterPriv(m_seqData.begin())));
++				return Iterator(std::unique_ptr<IterPriv>(new IterPriv(m_seqData.begin())));
+ 			case NodeType::Map:
+-				return Iterator(std::auto_ptr<IterPriv>(new IterPriv(m_mapData.begin())));
++				return Iterator(std::unique_ptr<IterPriv>(new IterPriv(m_mapData.begin())));
+ 		}
+ 		
+ 		assert(false);
+@@ -163,9 +163,9 @@ namespace YAML
+ 			case NodeType::Scalar:
+ 				return Iterator();
+ 			case NodeType::Sequence:
+-				return Iterator(std::auto_ptr<IterPriv>(new IterPriv(m_seqData.end())));
++				return Iterator(std::unique_ptr<IterPriv>(new IterPriv(m_seqData.end())));
+ 			case NodeType::Map:
+-				return Iterator(std::auto_ptr<IterPriv>(new IterPriv(m_mapData.end())));
++				return Iterator(std::unique_ptr<IterPriv>(new IterPriv(m_mapData.end())));
+ 		}
+ 		
+ 		assert(false);
+diff --git a/contrib/yaml-cpp/src/nodeownership.cpp b/contrib/yaml-cpp/src/nodeownership.cpp
+index 118edbc..58c383a 100644
+--- a/contrib/yaml-cpp/src/nodeownership.cpp
++++ b/contrib/yaml-cpp/src/nodeownership.cpp
+@@ -15,7 +15,7 @@ namespace YAML
+ 
+ 	Node& NodeOwnership::_Create()
+ 	{
+-		m_nodes.push_back(std::auto_ptr<Node>(new Node));
++		m_nodes.push_back(std::move(std::unique_ptr<Node>(new Node)));
+ 		return m_nodes.back();
+ 	}
+ 
+diff --git a/contrib/yaml-cpp/src/ptr_stack.h b/contrib/yaml-cpp/src/ptr_stack.h
+index bf454fb..8996150 100644
+--- a/contrib/yaml-cpp/src/ptr_stack.h
++++ b/contrib/yaml-cpp/src/ptr_stack.h
+@@ -27,12 +27,12 @@ public:
+ 	std::size_t size() const { return m_data.size(); }
+ 	bool empty() const { return m_data.empty(); }
+ 	
+-	void push(std::auto_ptr<T> t) {
++	void push(std::unique_ptr<T> &&t) {
+ 		m_data.push_back(NULL);
+ 		m_data.back() = t.release();
+ 	}
+-	std::auto_ptr<T> pop() {
+-		std::auto_ptr<T> t(m_data.back());
++	std::unique_ptr<T> pop() {
++		std::unique_ptr<T> t(m_data.back());
+ 		m_data.pop_back();
+ 		return t;
+ 	}
+diff --git a/contrib/yaml-cpp/src/ptr_vector.h b/contrib/yaml-cpp/src/ptr_vector.h
+index 7b936cb..3716fe0 100644
+--- a/contrib/yaml-cpp/src/ptr_vector.h
++++ b/contrib/yaml-cpp/src/ptr_vector.h
+@@ -29,7 +29,7 @@ namespace YAML {
+ 		std::size_t size() const { return m_data.size(); }
+ 		bool empty() const { return m_data.empty(); }
+ 		
+-		void push_back(std::auto_ptr<T> t) {
++		void push_back(std::unique_ptr<T> t) {
+ 			m_data.push_back(NULL);
+ 			m_data.back() = t.release();
+ 		}
+diff --git a/contrib/yaml-cpp/src/scanner.cpp b/contrib/yaml-cpp/src/scanner.cpp
+index 199ef25..c72b573 100644
+--- a/contrib/yaml-cpp/src/scanner.cpp
++++ b/contrib/yaml-cpp/src/scanner.cpp
+@@ -234,8 +234,8 @@ namespace YAML
+ 	{
+ 		m_startedStream = true;
+ 		m_simpleKeyAllowed = true;
+-		std::auto_ptr<IndentMarker> pIndent(new IndentMarker(-1, IndentMarker::NONE));
+-		m_indentRefs.push_back(pIndent);
++		std::unique_ptr<IndentMarker> pIndent(new IndentMarker(-1, IndentMarker::NONE));
++		m_indentRefs.push_back(std::move(pIndent));
+ 		m_indents.push(&m_indentRefs.back());
+ 	}
+ 
+@@ -281,7 +281,7 @@ namespace YAML
+ 		if(InFlowContext())
+ 			return 0;
+ 		
+-		std::auto_ptr<IndentMarker> pIndent(new IndentMarker(column, type));
++		std::unique_ptr<IndentMarker> pIndent(new IndentMarker(column, type));
+ 		IndentMarker& indent = *pIndent;
+ 		const IndentMarker& lastIndent = *m_indents.top();
+ 
+@@ -296,7 +296,7 @@ namespace YAML
+ 
+ 		// and then the indent
+ 		m_indents.push(&indent);
+-		m_indentRefs.push_back(pIndent);
++		m_indentRefs.push_back(std::move(pIndent));
+ 		return &m_indentRefs.back();
+ 	}
+ 
+diff --git a/contrib/yaml-cpp/src/setting.h b/contrib/yaml-cpp/src/setting.h
+index 806ccda..806c7a1 100644
+--- a/contrib/yaml-cpp/src/setting.h
++++ b/contrib/yaml-cpp/src/setting.h
+@@ -21,7 +21,7 @@ namespace YAML
+ 		Setting(): m_value() {}
+ 		
+ 		const T get() const { return m_value; }
+-		std::auto_ptr <SettingChangeBase> set(const T& value);
++		std::unique_ptr <SettingChangeBase> set(const T& value);
+ 		void restore(const Setting<T>& oldSetting) {
+ 			m_value = oldSetting.get();
+ 		}
+@@ -56,8 +56,8 @@ namespace YAML
+ 	};
+ 
+ 	template <typename T>
+-	inline std::auto_ptr <SettingChangeBase> Setting<T>::set(const T& value) {
+-		std::auto_ptr <SettingChangeBase> pChange(new SettingChange<T> (this));
++	inline std::unique_ptr <SettingChangeBase> Setting<T>::set(const T& value) {
++		std::unique_ptr <SettingChangeBase> pChange(new SettingChange<T> (this));
+ 		m_value = value;
+ 		return pChange;
+ 	}
+@@ -81,11 +81,11 @@ namespace YAML
+ 				(*it)->pop();
+ 		}
+ 		
+-		void push(std::auto_ptr <SettingChangeBase> pSettingChange) {
++		void push(std::unique_ptr <SettingChangeBase> pSettingChange) {
+ 			m_settingChanges.push_back(pSettingChange.release());
+ 		}
+ 		
+-		// like std::auto_ptr - assignment is transfer of ownership
++		// like std::unique_ptr - assignment is transfer of ownership
+ 		SettingChanges& operator = (SettingChanges& rhs) {
+ 			if(this == &rhs)
+ 				return *this;
+diff --git a/contrib/yaml-cpp/src/singledocparser.h b/contrib/yaml-cpp/src/singledocparser.h
+index 3798dcc..1589ba8 100644
+--- a/contrib/yaml-cpp/src/singledocparser.h
++++ b/contrib/yaml-cpp/src/singledocparser.h
+@@ -53,7 +53,7 @@ namespace YAML
+ 	private:
+ 		Scanner& m_scanner;
+ 		const Directives& m_directives;
+-		std::auto_ptr<CollectionStack> m_pCollectionStack;
++		std::unique_ptr<CollectionStack> m_pCollectionStack;
+ 		
+ 		typedef std::map<std::string, anchor_t> Anchors;
+ 		Anchors m_anchors;
+diff --git a/src/fncs.cpp b/src/fncs.cpp
+index 1591c4a..bdf2281 100644
+--- a/src/fncs.cpp
++++ b/src/fncs.cpp
+@@ -964,7 +964,7 @@ ostream& operator << (ostream& os, zframe_t *self) {
+     assert (self);
+     assert (zframe_is (self));
+ 
+-    byte *data = zframe_data (self);
++    unsigned char *data = zframe_data (self);
+     size_t size = zframe_size (self);
+ 
+     //  Probe data to check if it looks like unprintable binary
 diff --git a/src/player.cpp b/src/player.cpp
 index 91f2a7a..572580a 100644
 --- a/src/player.cpp
@@ -29,3 +355,6 @@ index 91f2a7a..572580a 100644
  
          /* convert first token into fncs::time */
          {
+-- 
+2.39.2
+
